@@ -35,6 +35,59 @@ function setLastSeen(currentUserId: string, targetUserId: string) {
   localStorage.setItem(`realtalk_last_seen_${currentUserId}_${targetUserId}`, Date.now().toString());
 }
 
+function getMessageDateHeader(dateString: string): string {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  const now = new Date();
+
+  const isToday =
+    date.getDate() === now.getDate() &&
+    date.getMonth() === now.getMonth() &&
+    date.getFullYear() === now.getFullYear();
+
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  const isYesterday =
+    date.getDate() === yesterday.getDate() &&
+    date.getMonth() === yesterday.getMonth() &&
+    date.getFullYear() === yesterday.getFullYear();
+
+  if (isToday) return 'Today';
+  if (isYesterday) return 'Yesterday';
+  return date.toLocaleDateString([], {
+    month: 'short',
+    day: 'numeric',
+    year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined,
+  });
+}
+
+function formatMessageTimestamp(dateString: string): string {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  const now = new Date();
+
+  const isToday =
+    date.getDate() === now.getDate() &&
+    date.getMonth() === now.getMonth() &&
+    date.getFullYear() === now.getFullYear();
+
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  const isYesterday =
+    date.getDate() === yesterday.getDate() &&
+    date.getMonth() === yesterday.getMonth() &&
+    date.getFullYear() === yesterday.getFullYear();
+
+  const timeStr = date.toLocaleTimeString([], {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+
+  if (isToday) return timeStr;
+  if (isYesterday) return `Yesterday ${timeStr}`;
+  return `${date.toLocaleDateString([], { month: 'short', day: 'numeric' })}, ${timeStr}`;
+}
+
 export default function ChatPage() {
   const { user, loading, logoutUser } = useAuth();
   const router = useRouter();
@@ -439,64 +492,70 @@ export default function ChatPage() {
               </div>
             </div>
           ) : (
-            messages.map((msg) => {
+            messages.map((msg, index) => {
               const isMine = msg.senderId === user.$id;
-              const formattedTime = msg.$createdAt
-                ? new Date(msg.$createdAt).toLocaleTimeString([], {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })
-                : '';
+              const formattedTime = formatMessageTimestamp(msg.$createdAt);
+
+              const currentHeader = getMessageDateHeader(msg.$createdAt);
+              const prevHeader = index > 0 ? getMessageDateHeader(messages[index - 1].$createdAt) : null;
+              const showDateHeader = currentHeader && currentHeader !== prevHeader;
 
               return (
-                <div
-                  key={msg.$id}
-                  className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}
-                >
-                  <div
-                    className={`max-w-[85%] sm:max-w-md px-3.5 py-2 rounded-lg text-sm shadow-md transition-all ${
-                      isMine
-                        ? msg.status === 'error'
-                          ? 'bg-rose-950/40 text-wa-textPrimary rounded-tr-none border border-rose-500/50'
-                          : 'bg-wa-bubbleOut text-wa-textPrimary rounded-tr-none'
-                        : 'bg-wa-bubbleIn text-wa-textPrimary rounded-tl-none border border-slate-800/40'
-                    }`}
-                  >
-                    {!isMine && (
-                      <p className="text-[11px] font-semibold text-wa-teal mb-0.5">
-                        {msg.senderName}
-                      </p>
-                    )}
-                    <div className="flex flex-wrap items-end justify-between gap-x-3 gap-y-1">
-                      <p className="leading-relaxed break-words text-sm flex-1 min-w-[60px]">{msg.text}</p>
+                <div key={msg.$id} className="space-y-3">
+                  {showDateHeader && (
+                    <div className="flex justify-center my-3">
+                      <span className="bg-wa-header text-wa-textSecondary text-[11px] font-medium px-3.5 py-1 rounded-full border border-slate-800/80 shadow-sm select-none">
+                        {currentHeader}
+                      </span>
+                    </div>
+                  )}
 
-                      <div className="flex items-center gap-1.5 text-[10px] text-slate-400 select-none ml-auto shrink-0 pt-0.5">
-                        <span>{formattedTime}</span>
-                        {isMine && (
-                          <>
-                            {msg.status === 'sending' && (
-                              <span title="Sending...">
-                                <Clock className="w-3 h-3 animate-spin text-slate-400" />
-                              </span>
-                            )}
-                            {msg.status === 'error' && (
-                              <button
-                                type="button"
-                                onClick={() => handleSendMessage(undefined, msg.text, msg.$id)}
-                                className="flex items-center gap-1 text-rose-300 hover:text-rose-100 font-semibold bg-rose-500/30 hover:bg-rose-500/50 px-2 py-0.5 rounded transition shadow-sm ml-1 cursor-pointer"
-                                title="Failed to send. Click to retry."
-                              >
-                                <AlertCircle className="w-3.5 h-3.5" />
-                                <span>Retry</span>
-                              </button>
-                            )}
-                            {msg.status === 'sent' && (
-                              <span title="Sent">
-                                <Check className="w-3 h-3 text-wa-teal" />
-                              </span>
-                            )}
-                          </>
-                        )}
+                  <div className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
+                    <div
+                      className={`max-w-[85%] sm:max-w-md px-3.5 py-2 rounded-lg text-sm shadow-md transition-all ${
+                        isMine
+                          ? msg.status === 'error'
+                            ? 'bg-rose-950/40 text-wa-textPrimary rounded-tr-none border border-rose-500/50'
+                            : 'bg-wa-bubbleOut text-wa-textPrimary rounded-tr-none'
+                          : 'bg-wa-bubbleIn text-wa-textPrimary rounded-tl-none border border-slate-800/40'
+                      }`}
+                    >
+                      {!isMine && (
+                        <p className="text-[11px] font-semibold text-wa-teal mb-0.5">
+                          {msg.senderName}
+                        </p>
+                      )}
+                      <div className="flex flex-wrap items-end justify-between gap-x-3 gap-y-1">
+                        <p className="leading-relaxed break-words text-sm flex-1 min-w-[60px]">{msg.text}</p>
+
+                        <div className="flex items-center gap-1.5 text-[10px] text-slate-400 select-none ml-auto shrink-0 pt-0.5">
+                          <span>{formattedTime}</span>
+                          {isMine && (
+                            <>
+                              {msg.status === 'sending' && (
+                                <span title="Sending...">
+                                  <Clock className="w-3 h-3 animate-spin text-slate-400" />
+                                </span>
+                              )}
+                              {msg.status === 'error' && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleSendMessage(undefined, msg.text, msg.$id)}
+                                  className="flex items-center gap-1 text-rose-300 hover:text-rose-100 font-semibold bg-rose-500/30 hover:bg-rose-500/50 px-2 py-0.5 rounded transition shadow-sm ml-1 cursor-pointer"
+                                  title="Failed to send. Click to retry."
+                                >
+                                  <AlertCircle className="w-3.5 h-3.5" />
+                                  <span>Retry</span>
+                                </button>
+                              )}
+                              {msg.status === 'sent' && (
+                                <span title="Sent">
+                                  <Check className="w-3 h-3 text-wa-teal" />
+                                </span>
+                              )}
+                            </>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
