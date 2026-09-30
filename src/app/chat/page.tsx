@@ -249,6 +249,13 @@ export default function ChatPage() {
       u.email?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // Auto open mobile menu on small screens when no contact is selected
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.innerWidth < 768 && !selectedUser) {
+      setMobileMenuOpen(true);
+    }
+  }, [selectedUser]);
+
   if (loading || !user) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-wa-bg text-wa-textPrimary">
@@ -261,17 +268,25 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="flex h-screen bg-wa-bg text-wa-textPrimary font-sans overflow-hidden">
+    <div className="flex h-screen h-[100dvh] bg-wa-bg text-wa-textPrimary font-sans overflow-hidden relative">
+      {/* Mobile Menu Backdrop */}
+      {mobileMenuOpen && (
+        <div
+          className="fixed inset-0 bg-black/60 z-20 md:hidden backdrop-blur-sm transition-opacity"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
+
       {/* Sidebar - Desktop & Mobile Drawer */}
       <aside
         className={`${
           mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
-        } fixed md:relative z-30 inset-y-0 left-0 w-80 lg:w-96 bg-wa-sidebar border-r border-slate-800/60 flex flex-col transition-transform duration-200 ease-in-out`}
+        } fixed md:relative z-30 inset-y-0 left-0 w-80 lg:w-96 bg-wa-sidebar border-r border-slate-800/60 flex flex-col transition-transform duration-200 ease-in-out h-full`}
       >
         {/* Top Profile Header */}
-        <div className="h-16 px-4 bg-wa-header flex items-center justify-between border-r border-slate-800/40">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-full bg-wa-tealDark flex items-center justify-center text-white font-semibold shadow-sm">
+        <div className="h-16 px-4 bg-wa-header flex items-center justify-between border-b border-slate-800/40 shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="h-10 w-10 rounded-full bg-wa-tealDark flex items-center justify-center text-white font-semibold shadow-sm shrink-0">
               {user.name ? user.name[0].toUpperCase() : 'U'}
             </div>
             <div className="truncate">
@@ -280,7 +295,7 @@ export default function ChatPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-1 text-wa-textSecondary">
+          <div className="flex items-center gap-1 text-wa-textSecondary shrink-0">
             <button
               onClick={handleLogout}
               title="Logout"
@@ -288,11 +303,18 @@ export default function ChatPage() {
             >
               <LogOut className="w-5 h-5" />
             </button>
+            <button
+              onClick={() => setMobileMenuOpen(false)}
+              className="md:hidden p-2 hover:text-white hover:bg-slate-700/50 rounded-full transition"
+              title="Close Menu"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
         </div>
 
         {/* Search Bar */}
-        <div className="p-2 bg-wa-sidebar border-b border-slate-800/60">
+        <div className="p-2 bg-wa-sidebar border-b border-slate-800/60 shrink-0">
           <div className="relative flex items-center bg-wa-header rounded-lg px-3 py-1.5">
             <Search className="w-4 h-4 text-wa-textSecondary shrink-0 mr-3" />
             <input
@@ -353,20 +375,22 @@ export default function ChatPage() {
       </aside>
 
       {/* Main Chat Window */}
-      <main className="flex-1 flex flex-col h-full bg-wa-bg relative">
+      <main className="flex-1 flex flex-col h-full bg-wa-bg relative min-w-0">
         {/* Chat Header */}
-        <header className="h-16 px-4 bg-wa-header border-b border-slate-800/60 flex items-center justify-between z-10">
-          <div className="flex items-center gap-3">
+        <header className="h-16 px-4 bg-wa-header border-b border-slate-800/60 flex items-center justify-between z-10 shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden p-2 text-wa-textSecondary hover:text-white rounded-lg"
+              className="md:hidden flex items-center gap-2 px-3 py-1.5 bg-wa-sidebar hover:bg-slate-700/60 text-wa-teal rounded-lg border border-slate-700/50 text-xs font-semibold shadow-sm shrink-0"
+              title="Open Contacts Menu"
             >
-              {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+              <Menu className="w-4 h-4" />
+              <span>Contacts</span>
             </button>
 
             {selectedUser ? (
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-full bg-slate-700 flex items-center justify-center text-white font-semibold text-sm">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="h-10 w-10 rounded-full bg-slate-700 flex items-center justify-center text-white font-semibold text-sm shrink-0">
                   {selectedUser.name ? selectedUser.name[0].toUpperCase() : 'U'}
                 </div>
                 <div className="truncate">
@@ -375,7 +399,7 @@ export default function ChatPage() {
                 </div>
               </div>
             ) : (
-              <h3 className="font-semibold text-sm text-wa-textSecondary">RealTalk</h3>
+              <h3 className="font-semibold text-sm text-wa-textSecondary hidden sm:block">RealTalk</h3>
             )}
           </div>
         </header>
@@ -383,7 +407,7 @@ export default function ChatPage() {
         {/* Chat Wallpaper Feed */}
         <div className="flex-1 overflow-y-auto wa-chat-pattern p-4 sm:p-6 space-y-3">
           {!selectedUser ? (
-            <div className="h-full flex flex-col items-center justify-center text-wa-textSecondary space-y-4">
+            <div className="h-full flex flex-col items-center justify-center text-wa-textSecondary space-y-4 p-4 text-center">
               <div className="p-6 rounded-full bg-wa-header border border-slate-800 text-wa-teal">
                 <MessageSquare className="w-16 h-16 stroke-1" />
               </div>
@@ -393,6 +417,13 @@ export default function ChatPage() {
                   Send and receive messages in real-time. Select a contact from the left sidebar to begin.
                 </p>
               </div>
+              <button
+                onClick={() => setMobileMenuOpen(true)}
+                className="md:hidden mt-2 px-5 py-2.5 bg-wa-teal hover:bg-wa-tealDark text-white text-xs font-semibold rounded-full shadow-md flex items-center gap-2"
+              >
+                <Menu className="w-4 h-4" />
+                Select a Contact
+              </button>
             </div>
           ) : loadingMessages ? (
             <div className="h-full flex items-center justify-center text-wa-textSecondary text-xs">
@@ -480,7 +511,7 @@ export default function ChatPage() {
         {selectedUser && (
           <form
             onSubmit={handleSendMessage}
-            className="h-16 px-4 bg-wa-header border-t border-slate-800/60 flex items-center gap-3 z-10"
+            className="h-16 px-4 bg-wa-header border-t border-slate-800/60 flex items-center gap-3 z-10 shrink-0"
           >
             <input
               type="text"
